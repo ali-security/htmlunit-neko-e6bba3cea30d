@@ -2578,6 +2578,9 @@ public class HTMLScanner
                     if (c == '\r' || c == '\n') {
                         if (c == '\r') {
                             c = fCurrentEntity.read();
+                            if (c == -1) {
+                                break;
+                            }
                             if (c != '\n') {
                                 fCurrentEntity.offset--;
                                 fCurrentEntity.characterOffset_--;
@@ -2600,7 +2603,7 @@ public class HTMLScanner
                     if (c == '?' || c == '/') {
                         char c0 = (char)c;
                         c = fCurrentEntity.read();
-                        if (c == '>') {
+                        if (c == -1 || c == '>') {
                             break;
                         }
                         fStringBuffer.append(c0);
@@ -2611,6 +2614,9 @@ public class HTMLScanner
                         fStringBuffer.append('\n');
                         if (c == '\r') {
                             c = fCurrentEntity.read();
+                            if (c == -1) {
+                                break;
+                            }
                             if (c != '\n') {
                                 fCurrentEntity.offset--;
                                 fCurrentEntity.characterOffset_--;
