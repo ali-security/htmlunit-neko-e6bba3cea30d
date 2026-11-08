@@ -1,0 +1,46 @@
+name: seal-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Optional surefire -Dtest selector; empty runs the full suite"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch upstream NekoHTML test fixtures (byte-exact, CRLF preserved)
+        run: |
+          git fetch --depth=1 https://github.com/HtmlUnit/htmlunit-neko.git 05fe9d43fc9331f6b0ad9a9d0b0c0e7a3ead8275
+          git archive FETCH_HEAD src/test/resources | tar -x --skip-old-files -f -
+          find src/test/resources -type f | wc -l
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+
+      - name: Install Maven 3.3.9
+        run: |
+          curl -fsSL https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.3.9/bin" >> "$GITHUB_PATH"
+
+      - name: Build and test
+        run: |
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            mvn -B -V -e -Dgpg.skip=true -Dtest='${{ inputs.test-filter }}' -DfailIfNoTests=false clean package
+          else
+            mvn -B -V -e -Dgpg.skip=true clean package
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neko-htmlunit-jar
+          path: target/neko-htmlunit-2.24.jar
+          if-no-files-found: error
